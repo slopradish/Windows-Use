@@ -145,7 +145,7 @@ def memory_tool(mode: Literal['view','read','write','delete','update'],path: Opt
     return "Invalid mode. Use 'view', 'write', 'read', 'update', or 'delete'."
 
 @Tool('shell_tool',model=Shell)
-def shell_tool(command: str,**kwargs) -> str:
+def shell_tool(command: str,timeout:int=10,**kwargs) -> str:
     '''
     Executes PowerShell commands and returns output with status codes.
     
@@ -159,7 +159,7 @@ def shell_tool(command: str,**kwargs) -> str:
     Returns both command output and exit status code for error handling.
     '''
     desktop:_Desktop=kwargs['desktop']
-    response,status=desktop.execute_command(command)
+    response,status=desktop.execute_command(command,timeout=timeout)
     return f'Response: {response}\nStatus Code: {status}'
 
 @Tool('click_tool',model=Click)

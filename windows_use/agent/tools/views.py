@@ -96,6 +96,11 @@ class Shell(SharedBaseModel):
             'echo "Hello World"'
         ]
     )
+    timeout: Optional[int] = Field(
+        description="Timeout in seconds for command execution",
+        default=10,
+        examples=[10, 20, 30]
+    )
 
 class Type(SharedBaseModel):
     loc: list[int] = Field(

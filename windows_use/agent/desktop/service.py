@@ -137,13 +137,13 @@ class Desktop:
             logger.error(f"Error parsing start menu apps: {e}")
             return {}
     
-    def execute_command(self, command: str) -> tuple[str, int]:
+    def execute_command(self, command: str,timeout:int=10) -> tuple[str, int]:
         try:
             encoded = base64.b64encode(command.encode("utf-16le")).decode("ascii")
             result = subprocess.run(
                 ['powershell', '-NoProfile', '-EncodedCommand', encoded], 
                 capture_output=True,  # No errors='ignore' - let subprocess return bytes
-                timeout=25,
+                timeout=timeout,
                 cwd=os.path.expanduser(path='~')
             )
             # Handle both bytes and str output (subprocess behavior varies by environment)
