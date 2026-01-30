@@ -15,45 +15,64 @@ logger=logging.getLogger(__name__)
 class ProductTelemetry:
     PROJECT_API_KEY = '[REDACTED_POSTHOG_KEY]'
     HOST = 'https://us.i.posthog.com'
-    TEMP_FOLDER=Path(TemporaryDirectory().name).parent
-    USER_ID=None
 
     def __init__(self):
-        if os.getenv("ANONYMIZED_TELEMETRY", True):
-            self.client = Posthog(
-                project_api_key=self.PROJECT_API_KEY,
-                host=self.HOST,
-                disable_geoip=False,
-                enable_exception_autocapture=True,
-                flush_at=10,
-                flush_interval=5.0
-            )
-            # Unregister Posthog's atexit join handler to prevent hanging on exit
-            # We accept that some events might be lost on abrupt exit in favor of responsiveness
+        self._client = None
+        self._user_id = None
+        self._enabled = os.getenv("ANONYMIZED_TELEMETRY", "True").lower() == "true"
+
+    @property
+    def client(self):
+        if self._enabled and self._client is None:
             try:
-                atexit.unregister(self.client.join)
-            except Exception:
-                pass
-        else:
-            self.client = None
+                self._client = Posthog(
+                    project_api_key=self.PROJECT_API_KEY,
+                    host=self.HOST,
+                    disable_geoip=False,
+                    enable_exception_autocapture=True,
+                    flush_at=10,
+                    flush_interval=5.0
+                )
+                # Unregister Posthog's atexit join handler to prevent hanging on exit
+                try:
+                    atexit.unregister(self._client.join)
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.error(f"Failed to initialize Posthog client: {e}")
+                self._enabled = False
+        return self._client
 
     @property
     def user_id(self):
-        if self.USER_ID is not None:
-            return self.USER_ID
-            
-        if (self.TEMP_FOLDER/'.windows-use-user-id').exists():
-            self.USER_ID = (self.TEMP_FOLDER/'.windows-use-user-id').read_text(encoding='utf-8')
-        else:
-            self.USER_ID = uuid7str()
-            (self.TEMP_FOLDER/'.windows-use-user-id').write_text(self.USER_ID, encoding='utf-8')
-        return self.USER_ID
+        if self._user_id is not None:
+            return self._user_id
+        
+        temp_dir = Path(os.path.join(os.environ.get('TEMP', os.environ.get('TMP', '/tmp')), '.windows-use'))
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        user_id_file = temp_dir / '.windows-use-user-id'
+        
+        if user_id_file.exists():
+            try:
+                self._user_id = user_id_file.read_text(encoding='utf-8').strip()
+            except Exception:
+                pass
+                
+        if not self._user_id:
+            self._user_id = uuid7str()
+            try:
+                user_id_file.write_text(self._user_id, encoding='utf-8')
+            except Exception:
+                pass
+                
+        return self._user_id
 
     def capture(self, event:BaseTelemetryEvent):
-        if not self.client:
+        client = self.client
+        if not client:
             return 
         try:
-            self.client.capture(
+            client.capture(
                 distinct_id=self.user_id,
                 event=event.event_name,
                 properties={**event.properties,'process_person_profile': True}
@@ -62,9 +81,10 @@ class ProductTelemetry:
             logger.error(f"Failed to capture telemetry event {event.event_name}: {e}")
 
     def flush(self):
-        if self.client:
+        client = self.client
+        if client:
             try:
-                self.client.flush()
+                client.flush()
             except Exception as e:
                 logger.error(f"Failed to flush telemetry data: {e}")
         else:

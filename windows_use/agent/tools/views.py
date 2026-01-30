@@ -13,7 +13,7 @@ class App(SharedBaseModel):
         examples=['launch']
     )
     name: Optional[str] = Field(
-        description="Exact application name as it appears in Start Menu or window title (required for launch/switch modes)",
+        description="Exact application name as it appears in Start Menu (to launch) or window title of the opened application (to switch or resize)",
         examples=['notepad', 'chrome', 'New tab - Personal - Microsoft Edge'],
         default=None
     )

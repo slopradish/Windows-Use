@@ -19,7 +19,7 @@ class ChatAzureOpenAI(BaseChatLLM):
         self,
         endpoint: str,
         deployment_name: str,
-        api_key: str|None=None,
+        api_key: str | None = None,
         model: str | None = None,
         api_version: str = "2024-10-21",
         temperature: float = 0.7,
@@ -47,33 +47,47 @@ class ChatAzureOpenAI(BaseChatLLM):
 
     @property
     def client(self) -> AzureOpenAI:
-        return AzureOpenAI(
-            api_key=self.api_key,
-            azure_endpoint=self.endpoint,
-            api_version=self.api_version,
-            azure_deployment=self.deployment_name,
-            max_retries=self.max_retries,
-            timeout=self.timeout,
-            default_headers=self.default_headers,
-            default_query=self.default_query,
-            http_client=self.http_client,
-            _strict_response_validation=self.strict_response_validation
-        )
+        """Initialize synchronous Azure OpenAI client"""
+        kwargs = {
+            "api_key": self.api_key,
+            "azure_endpoint": self.endpoint,
+            "api_version": self.api_version,
+            "azure_deployment": self.deployment_name,
+            "max_retries": self.max_retries,
+            "_strict_response_validation": self.strict_response_validation
+        }
+        if self.timeout:
+            kwargs["timeout"] = self.timeout
+        if self.default_headers:
+            kwargs["default_headers"] = self.default_headers
+        if self.default_query:
+            kwargs["default_query"] = self.default_query
+        if self.http_client:
+            kwargs["http_client"] = self.http_client
+        
+        return AzureOpenAI(**kwargs)
 
     @property
     def async_client(self) -> AsyncAzureOpenAI:
-        return AsyncAzureOpenAI(
-            api_key=self.api_key,
-            azure_endpoint=self.endpoint,
-            api_version=self.api_version,
-            azure_deployment=self.deployment_name,
-            max_retries=self.max_retries,
-            timeout=self.timeout,
-            default_headers=self.default_headers,
-            default_query=self.default_query,
-            http_client=self.http_client,
-            _strict_response_validation=self.strict_response_validation
-        )
+        """Initialize asynchronous Azure OpenAI client"""
+        kwargs = {
+            "api_key": self.api_key,
+            "azure_endpoint": self.endpoint,
+            "api_version": self.api_version,
+            "azure_deployment": self.deployment_name,
+            "max_retries": self.max_retries,
+            "_strict_response_validation": self.strict_response_validation
+        }
+        if self.timeout:
+            kwargs["timeout"] = self.timeout
+        if self.default_headers:
+            kwargs["default_headers"] = self.default_headers
+        if self.default_query:
+            kwargs["default_query"] = self.default_query
+        if self.http_client:
+            kwargs["http_client"] = self.http_client
+        
+        return AsyncAzureOpenAI(**kwargs)
 
     @property
     def provider(self) -> str:
@@ -84,6 +98,7 @@ class ChatAzureOpenAI(BaseChatLLM):
         return self.model or self.deployment_name
 
     def serialize_messages(self, messages: list[BaseMessage]) -> list:
+        """Convert BaseMessage objects to Azure OpenAI message format"""
         serialized = []
         for message in messages:
             if isinstance(message, SystemMessage):
@@ -110,39 +125,57 @@ class ChatAzureOpenAI(BaseChatLLM):
                 ))
                 # Tool Result
                 if message.content:
-                     serialized.append({
+                    serialized.append({
                         "role": "tool",
                         "tool_call_id": message.id,
                         "content": str(message.content)
                     })
             elif isinstance(message, ImageMessage):
                 message.scale_images(scale=0.7)
-                images=[f"data:{message.mime_type};base64,{image}" for image in message.convert_images("base64")]
-                content=[
-                    ChatCompletionContentPartTextParam(type="text", text=message.content),
-                    *[ChatCompletionContentPartImageParam(type="image_url", image_url=ImageURL(url=image, detail="auto")) for image in images]
-                ]
+                images = message.convert_images("base64")
+                content = [ChatCompletionContentPartTextParam(type="text", text=message.content)]
+                
+                for image in images:
+                    # Ensure proper data URL format
+                    if not image.startswith('data:'):
+                        image = f"data:{message.mime_type};base64,{image}"
+                    
+                    content.append(ChatCompletionContentPartImageParam(
+                        type="image_url",
+                        image_url=ImageURL(url=image, detail="auto")
+                    ))
+                
                 serialized.append(ChatCompletionUserMessageParam(role="user", content=content))
             else:
                 raise ValueError(f"Unsupported message type: {type(message)}")
         return serialized
 
-    def invoke(self, messages: list[BaseMessage], tools: list[Tool] = [], structured_output: BaseModel | None = None, json_mode: bool = False) -> ChatLLMResponse:
-        completion = self.client.chat.completions.create(
-            model=self.deployment_name,
-            messages=self.serialize_messages(messages),
-            temperature=self.temperature,
-            tools=[{'type': 'function', 'function': tool.json_schema} for tool in tools] if tools else None,
-            response_format=ResponseFormatJSONSchema(
+    def _prepare_tools(self, tools: list[Tool]) -> list[dict] | None:
+        """Convert tools to Azure OpenAI format"""
+        if not tools:
+            return None
+        
+        return [{'type': 'function', 'function': tool.json_schema} for tool in tools]
+
+    def _prepare_response_format(self, structured_output: BaseModel | None, json_mode: bool):
+        """Prepare response format for structured output or JSON mode"""
+        if structured_output:
+            return ResponseFormatJSONSchema(
                 type="json_schema",
                 json_schema=JSONSchema(
                     name=structured_output.__class__.__name__,
                     description="Model output structured as JSON schema",
                     schema=structured_output.model_json_schema()
                 )
-            ) if structured_output else ({"type": "json_object"} if json_mode else None)
-        )
-        message = completion.choices[0].message
+            )
+        elif json_mode:
+            return {"type": "json_object"}
+        return None
+
+    def _parse_response(self, message, structured_output: BaseModel | None = None) -> tuple[BaseMessage | BaseModel, str | None]:
+        """Parse Azure OpenAI response into content and thinking"""
+        thinking = getattr(message, 'reasoning_content', None)
+        
         if message.tool_calls:
             tool_call = message.tool_calls[0]
             content = ToolMessage(
@@ -151,110 +184,165 @@ class ChatAzureOpenAI(BaseChatLLM):
                 params=json.loads(tool_call.function.arguments),
                 content=None
             )
-            thinking = getattr(message, 'reasoning_content', None)
+        elif structured_output:
+            try:
+                content = structured_output.model_validate_json(message.content)
+            except Exception as e:
+                raise ValueError(f"Failed to parse structured output: {e}")
         else:
-            content=AIMessage(content=message.content)
-            thinking = getattr(message, 'reasoning_content', None)
+            content = AIMessage(content=message.content)
+        
+        return content, thinking
 
-        return ChatLLMResponse(
-            content=content,
-            thinking=thinking,
-            usage=ChatLLMUsage(
-                prompt_tokens=completion.usage.prompt_tokens,
-                completion_tokens=completion.usage.completion_tokens,
-                total_tokens=completion.usage.total_tokens
+    def invoke(self, messages: list[BaseMessage], tools: list[Tool] = [], structured_output: BaseModel | None = None, json_mode: bool = False) -> ChatLLMResponse:
+        """Synchronous invocation of Azure OpenAI chat completion"""
+        try:
+            azure_tools = self._prepare_tools(tools)
+            response_format = self._prepare_response_format(structured_output, json_mode)
+            
+            kwargs = {
+                "model": self.deployment_name,
+                "messages": self.serialize_messages(messages),
+                "temperature": self.temperature,
+            }
+            
+            if azure_tools:
+                kwargs["tools"] = azure_tools
+            if response_format:
+                kwargs["response_format"] = response_format
+            
+            completion = self.client.chat.completions.create(**kwargs)
+            
+            message = completion.choices[0].message
+            content, thinking = self._parse_response(message, structured_output)
+
+            return ChatLLMResponse(
+                content=content,
+                thinking=thinking,
+                usage=ChatLLMUsage(
+                    prompt_tokens=completion.usage.prompt_tokens,
+                    completion_tokens=completion.usage.completion_tokens,
+                    total_tokens=completion.usage.total_tokens
+                )
             )
-        )
+        except Exception as e:
+            raise RuntimeError(f"Azure OpenAI API error: {str(e)}")
 
     async def ainvoke(self, messages: list[BaseMessage], tools: list[Tool] = [], structured_output: BaseModel | None = None, json_mode: bool = False) -> ChatLLMResponse:
-        completion = await self.async_client.chat.completions.create(
-            model=self.deployment_name,
-            messages=self.serialize_messages(messages),
-            temperature=self.temperature,
-            tools=[{'type': 'function', 'function': tool.json_schema} for tool in tools] if tools else None,
-            response_format=ResponseFormatJSONSchema(
-                type="json_schema",
-                json_schema=JSONSchema(
-                    name=structured_output.__class__.__name__,
-                    description="Model output structured as JSON schema",
-                    schema=structured_output.model_json_schema()
-                )
-            ) if structured_output else ({"type": "json_object"} if json_mode else None)
-        )
-        message = completion.choices[0].message
-        if message.tool_calls:
-            tool_call = message.tool_calls[0]
-            content = ToolMessage(
-                id=tool_call.id,
-                name=tool_call.function.name,
-                params=json.loads(tool_call.function.arguments),
-                content=None
-            )
-            thinking = getattr(message, 'reasoning_content', None)
-        else:
-            content=AIMessage(content=message.content)
-            thinking = getattr(message, 'reasoning_content', None)
+        """Asynchronous invocation of Azure OpenAI chat completion"""
+        try:
+            azure_tools = self._prepare_tools(tools)
+            response_format = self._prepare_response_format(structured_output, json_mode)
+            
+            kwargs = {
+                "model": self.deployment_name,
+                "messages": self.serialize_messages(messages),
+                "temperature": self.temperature,
+            }
+            
+            if azure_tools:
+                kwargs["tools"] = azure_tools
+            if response_format:
+                kwargs["response_format"] = response_format
+            
+            completion = await self.async_client.chat.completions.create(**kwargs)
+            
+            message = completion.choices[0].message
+            content, thinking = self._parse_response(message, structured_output)
 
-        return ChatLLMResponse(
-            content=content,
-            thinking=thinking,
-            usage=ChatLLMUsage(
-                prompt_tokens=completion.usage.prompt_tokens,
-                completion_tokens=completion.usage.completion_tokens,
-                total_tokens=completion.usage.total_tokens
+            return ChatLLMResponse(
+                content=content,
+                thinking=thinking,
+                usage=ChatLLMUsage(
+                    prompt_tokens=completion.usage.prompt_tokens,
+                    completion_tokens=completion.usage.completion_tokens,
+                    total_tokens=completion.usage.total_tokens
+                )
             )
-        )
+        except Exception as e:
+            raise RuntimeError(f"Azure OpenAI API error: {str(e)}")
 
     def stream(self, messages: list[BaseMessage], tools: list[Tool] = [], structured_output: BaseModel | None = None, json_mode: bool = False) -> Iterator[ChatLLMResponse]:
-        stream = self.client.chat.completions.create(
-            model=self.deployment_name,
-            messages=self.serialize_messages(messages),
-            temperature=self.temperature,
-            stream=True,
-            tools=[{'type': 'function', 'function': tool.json_schema} for tool in tools] if tools else None,
-            response_format=ResponseFormatJSONSchema(
-                type="json_schema",
-                json_schema=JSONSchema(
-                    name=structured_output.__class__.__name__,
-                    description="Model output structured as JSON schema",
-                    schema=structured_output.model_json_schema()
-                )
-            ) if structured_output else ({"type": "json_object"} if json_mode else None)
-        )
-        for chunk in stream:
-            delta = chunk.choices[0].delta
-            if delta.content:
-                yield ChatLLMResponse(content=AIMessage(content=delta.content))
-            if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
-                yield ChatLLMResponse(thinking=delta.reasoning_content)
+        """Synchronous streaming of Azure OpenAI chat completion"""
+        try:
+            azure_tools = self._prepare_tools(tools)
+            response_format = self._prepare_response_format(structured_output, json_mode)
+            
+            kwargs = {
+                "model": self.deployment_name,
+                "messages": self.serialize_messages(messages),
+                "temperature": self.temperature,
+                "stream": True,
+            }
+            
+            if azure_tools:
+                kwargs["tools"] = azure_tools
+            if response_format:
+                kwargs["response_format"] = response_format
+            
+            stream = self.client.chat.completions.create(**kwargs)
+            
+            for chunk in stream:
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield ChatLLMResponse(content=AIMessage(content=delta.content))
+                if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
+                    yield ChatLLMResponse(thinking=delta.reasoning_content)
+        except Exception as e:
+            raise RuntimeError(f"Azure OpenAI API streaming error: {str(e)}")
 
     async def astream(self, messages: list[BaseMessage], tools: list[Tool] = [], structured_output: BaseModel | None = None, json_mode: bool = False) -> AsyncIterator[ChatLLMResponse]:
-        stream = await self.async_client.chat.completions.create(
-            model=self.deployment_name,
-            messages=self.serialize_messages(messages),
-            temperature=self.temperature,
-            stream=True,
-            tools=[{'type': 'function', 'function': tool.json_schema} for tool in tools] if tools else None,
-            response_format=ResponseFormatJSONSchema(
-                type="json_schema",
-                json_schema=JSONSchema(
-                    name=structured_output.__class__.__name__,
-                    description="Model output structured as JSON schema",
-                    schema=structured_output.model_json_schema()
-                )
-            ) if structured_output else ({"type": "json_object"} if json_mode else None)
-        )
-        async for chunk in stream:
-            delta = chunk.choices[0].delta
-            if delta.content:
-                yield ChatLLMResponse(content=AIMessage(content=delta.content))
-            if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
-                yield ChatLLMResponse(thinking=delta.reasoning_content)
+        """Asynchronous streaming of Azure OpenAI chat completion"""
+        try:
+            azure_tools = self._prepare_tools(tools)
+            response_format = self._prepare_response_format(structured_output, json_mode)
+            
+            kwargs = {
+                "model": self.deployment_name,
+                "messages": self.serialize_messages(messages),
+                "temperature": self.temperature,
+                "stream": True,
+            }
+            
+            if azure_tools:
+                kwargs["tools"] = azure_tools
+            if response_format:
+                kwargs["response_format"] = response_format
+            
+            stream = await self.async_client.chat.completions.create(**kwargs)
+            
+            async for chunk in stream:
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield ChatLLMResponse(content=AIMessage(content=delta.content))
+                if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
+                    yield ChatLLMResponse(thinking=delta.reasoning_content)
+        except Exception as e:
+            raise RuntimeError(f"Azure OpenAI API streaming error: {str(e)}")
 
-    def get_model_specification(self):
+    def get_model_specification(self) -> ModelMetadata:
+        """Retrieve model metadata"""
+        # Common Azure OpenAI deployment context windows
+        context_windows = {
+            "gpt-4o": 128000,
+            "gpt-4o-mini": 128000,
+            "gpt-4-turbo": 128000,
+            "gpt-4": 8192,
+            "gpt-35-turbo": 16385,
+            "gpt-3.5-turbo": 16385,
+        }
+        
+        # Try to determine context window from model name
+        model_name = self.model or self.deployment_name
+        context_window = 128000  # Default for most modern deployments
+        
+        for key, window in context_windows.items():
+            if key in model_name.lower():
+                context_window = window
+                break
+        
         return ModelMetadata(
-            name=self.model or self.deployment_name,
-            context_window=128000, # Default for most Azure deployments
+            name=model_name,
+            context_window=context_window,
             owned_by="microsoft"
         )
-

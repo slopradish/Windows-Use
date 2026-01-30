@@ -10,21 +10,14 @@ import comtypes
 import logging
 import weakref
 
-from .event_handlers import (
-    FocusChangedEventHandler,
-    StructureChangedEventHandler,
-    PropertyChangedEventHandler
-)
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 class WatchDog:
     def __init__(self):
-        self.uia_client = _AutomationClient.instance()
-        self.uia = self.uia_client.IUIAutomation
         self.is_running = Event()
         self.thread = None
+        self.uia = None
 
         # Callbacks
         self._focus_callback = None
@@ -88,6 +81,15 @@ class WatchDog:
         """Main event loop running in a dedicated STA thread."""
         comtypes.CoInitialize()
         try:
+            from .event_handlers import (
+                FocusChangedEventHandler,
+                StructureChangedEventHandler,
+                PropertyChangedEventHandler
+            )
+            # Initialize UIA inside the thread
+            uia_client = _AutomationClient.instance()
+            self.uia = uia_client.IUIAutomation
+
             while self.is_running.is_set():
                 # --- Focus Monitoring ---
                 if self._focus_callback and not self._focus_handler:
@@ -173,27 +175,28 @@ class WatchDog:
             print(f"WatchDogService died: {e}")
         finally:
             # Cleanup handlers on exit
-            if self._focus_handler:
-                try: 
-                    self.uia.RemoveFocusChangedEventHandler(self._focus_handler)
-                except: pass
-                self._focus_handler = None
-            
-            if self._structure_handler:
-                try:
-                    target = self._active_structure_element if self._active_structure_element else self.uia.GetRootElement()
-                    self.uia.RemoveStructureChangedEventHandler(target, self._structure_handler)
-                except: pass
-                self._structure_handler = None
-                self._active_structure_element = None
+            if self.uia:
+                if self._focus_handler:
+                    try: 
+                        self.uia.RemoveFocusChangedEventHandler(self._focus_handler)
+                    except: pass
+                    self._focus_handler = None
+                
+                if self._structure_handler:
+                    try:
+                        target = self._active_structure_element if self._active_structure_element else self.uia.GetRootElement()
+                        self.uia.RemoveStructureChangedEventHandler(target, self._structure_handler)
+                    except: pass
+                    self._structure_handler = None
+                    self._active_structure_element = None
 
-            if self._property_handler:
-                try:
-                    target = self._active_property_element if self._active_property_element else self.uia.GetRootElement()
-                    self.uia.RemovePropertyChangedEventHandler(target, self._property_handler)
-                except: pass
-                self._property_handler = None
-                self._active_property_element = None
-                self._active_property_ids = None
+                if self._property_handler:
+                    try:
+                        target = self._active_property_element if self._active_property_element else self.uia.GetRootElement()
+                        self.uia.RemovePropertyChangedEventHandler(target, self._property_handler)
+                    except: pass
+                    self._property_handler = None
+                    self._active_property_element = None
+                    self._active_property_ids = None
             
             comtypes.CoUninitialize()
