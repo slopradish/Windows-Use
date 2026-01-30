@@ -31,6 +31,7 @@ Windows Use has the following tools:
 - `mode`: the agent has two modes, `flash` and `normal`.
     - `flash`: The agent will use the flash prompt to generate the response. (Lightweight)
     - `normal`: The agent will use the normal prompt to generate the response.
+- `max_steps`: Maximum number of steps the agent can take to complete the task.
 - `llm`: LLM to be used by the agent.
 - `browser`: Browser to be used by the agent.
 - `use_vision`: Screenshot will be given to the LLM if true.
