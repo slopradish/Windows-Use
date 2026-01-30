@@ -25,6 +25,7 @@
 **Windows-Use** is a powerful automation agent that interact directly with the Windows at GUI layer. It bridges the gap between AI Agents and the Windows OS to perform tasks such as opening apps, clicking buttons, typing, executing shell commands, and capturing UI state all without relying on traditional computer vision models. Enabling any LLM to perform computer automation instead of relying on specific models for it.
 
 ## Updates
+- Optimized the Desktop State Capture (speed: 0.2-0.8s)
 - Migrated from langchain, langgraph.
 
 ## 🛠️Installation Guide

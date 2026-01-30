@@ -10,12 +10,12 @@
         [Begin of Desktop]
         Active Desktop: {active_desktop}
         Cursor Location: {cursor_location}
-        [Begin of App Info]
-        Foreground App: {active_app}
+        [Begin of Window Info]
+        Foreground Window: {active_window}
 
-        Background Apps:
-        {apps}
-        [End of App Info]
+        Background Windows:
+        {windows}
+        [End of Window Info]
         
         [Begin of Screen]
         List of Interactive Elements:

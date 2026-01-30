@@ -50,20 +50,20 @@ At every step, Windows-Use receives the following structured state:
     Active Desktop: [name]
     Cursor Location: [x,y]
 
-    [Begin of App Info]
-    Foreground App:
+    [Begin of Window Info]
+    Foreground Window:
     # Name|Depth|Status|Width|Height|Handle
 
-    Background Apps:
+    Background Windows:
     # Name|Depth|Status|Width|Height|Handle
-    [End of App Info]
+    [End of Window Info]
 
     [Begin of Screen]
     List of Interactive Elements:
-    # id|app|type|name|coords|focus
+    # id|window|type|name|coords|focus
 
     List of Scrollable Elements:
-    # id|app|type|name|coords|h_scroll|h_pct|v_scroll|v_pct|focus
+    # id|window|type|name|coords|h_scroll|h_pct|v_scroll|v_pct|focus
     [End of Screen]
     
     [Begin of Virtual Desktops]

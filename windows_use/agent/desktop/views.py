@@ -24,9 +24,8 @@ class Status(Enum):
 
 
 @dataclass
-class App:
+class Window:
     name:str
-    runtime_id:tuple[int]
     is_browser:bool
     depth:int
     status:Status
@@ -49,8 +48,8 @@ class Size:
 class DesktopState:
     active_desktop:dict
     all_desktops:list[dict]
-    apps:list[App]
-    active_app:Optional[App]
+    windows:list[Window]
+    active_window:Optional[Window]
     screenshot:Optional[Image]=None
     tree_state:Optional[TreeState]=None
 
@@ -64,15 +63,15 @@ class DesktopState:
         rows=[[desktop.get("name")] for desktop in self.all_desktops]
         return tabulate(rows, headers=headers, tablefmt="simple")
 
-    def active_app_to_string(self):
-        if not self.active_app:
-            return 'No active app found'
+    def active_window_to_string(self):
+        if not self.active_window:
+            return 'No active window found'
         headers = ["Name", "Depth", "Status", "Width", "Height", "Handle"]
-        return tabulate([self.active_app.to_row()], headers=headers, tablefmt="simple")
+        return tabulate([self.active_window.to_row()], headers=headers, tablefmt="simple")
 
-    def apps_to_string(self):
-        if not self.apps:
-            return 'No apps running in background'
+    def windows_to_string(self):
+        if not self.windows:
+            return 'No windows found'
         headers = ["Name", "Depth", "Status", "Width", "Height", "Handle"]
-        rows = [app.to_row() for app in self.apps]
+        rows = [window.to_row() for window in self.windows]
         return tabulate(rows, headers=headers, tablefmt="simple")

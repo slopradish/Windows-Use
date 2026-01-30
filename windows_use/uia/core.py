@@ -92,6 +92,10 @@ class _AutomationClient:
         return cls._instance
 
     def __init__(self):
+        try:
+            ctypes.windll.ole32.CoInitialize(None)
+        except Exception:
+            pass
         tryCount = 3
         for retry in range(tryCount):
             try:
