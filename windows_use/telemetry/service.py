@@ -25,8 +25,8 @@ class ProductTelemetry:
                 host=self.HOST,
                 disable_geoip=False,
                 enable_exception_autocapture=True,
-                flush_at=1,
-                flush_interval=0.5
+                flush_at=10,
+                flush_interval=5.0
             )
             # Unregister Posthog's atexit join handler to prevent hanging on exit
             # We accept that some events might be lost on abrupt exit in favor of responsiveness
@@ -39,6 +39,9 @@ class ProductTelemetry:
 
     @property
     def user_id(self):
+        if self.USER_ID is not None:
+            return self.USER_ID
+            
         if (self.TEMP_FOLDER/'.windows-use-user-id').exists():
             self.USER_ID = (self.TEMP_FOLDER/'.windows-use-user-id').read_text(encoding='utf-8')
         else:

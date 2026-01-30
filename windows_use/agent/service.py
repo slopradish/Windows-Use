@@ -238,7 +238,6 @@ class Agent:
             return AgentResult(is_done=True,content=answer)
         except KeyboardInterrupt:
             logger.warning("[Agent] ⚠️: Interrupted by user (Ctrl+C).")
-            self.telemetry.flush()
             return AgentResult(is_done=False, error="Interrupted by user")
         
     def print_response(self,query: str):
