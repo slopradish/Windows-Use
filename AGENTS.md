@@ -44,6 +44,10 @@ The project uses `uv` as the package manager.
 - `uv run main.py` to start the agent.
 - `uv add windows-use` to add the package to the existing project.
 
+## Testing
+
+- `pytest` to run all tests.
+
 ## Project Structure
 
 - `windows_use/llms` - To access different LLMs.

@@ -198,7 +198,7 @@ def type_tool(loc:Optional[list[int]]=None,text:str='',clear:Literal['true','fal
     '''
     x,y=loc
     desktop:_Desktop=kwargs['desktop']
-    desktop.type(loc,text,clear,caret_position,press_enter)
+    desktop.type(loc=loc,text=text,caret_position=caret_position,clear=clear,press_enter=press_enter)
     return f'Typed {text} at ({x},{y}).'
 
 @Tool('scroll_tool',model=Scroll)

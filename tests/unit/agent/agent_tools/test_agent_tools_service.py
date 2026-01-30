@@ -58,8 +58,8 @@ class TestAgentToolsService:
     def test_shell_tool(self, mock_desktop):
         """Test shell_tool delegation."""
         mock_desktop.execute_command.return_value = ("Output", 0)
-        result = shell_tool.invoke(**{"command": "ls", "desktop": mock_desktop})
-        mock_desktop.execute_command.assert_called_once_with("ls")
+        result = shell_tool.invoke(**{"command": "ls", "timeout": 15, "desktop": mock_desktop})
+        mock_desktop.execute_command.assert_called_once_with("ls", timeout=15)
         assert "Output" in result
         assert "0" in result
 
@@ -70,15 +70,20 @@ class TestAgentToolsService:
 
     def test_type_tool(self, mock_desktop):
         """Test type_tool delegation."""
-        type_tool.invoke(**{"loc": [10, 20], "text": "hello", "clear": "true", "desktop": mock_desktop})
-        mock_desktop.type.assert_called_once_with([10, 20], "hello", "true", "idle", "false")
+        type_tool.invoke(**{"loc": [10, 20], "text": "hello", "clear": "true", "caret_position": "start", "press_enter": "true", "desktop": mock_desktop})
+        mock_desktop.type.assert_called_once_with(
+            loc=[10, 20], 
+            text="hello", 
+            caret_position="start", 
+            clear="true", 
+            press_enter="true"
+        )
 
     def test_scroll_tool(self, mock_desktop):
         """Test scroll_tool delegation."""
-        # service.py: if response...
         mock_desktop.scroll.return_value = None 
-        scroll_tool.invoke(**{"loc": [10, 20], "wheel_times": 3, "desktop": mock_desktop})
-        mock_desktop.scroll.assert_called_once_with([10, 20], "vertical", "down", 3)
+        scroll_tool.invoke(**{"loc": [10, 20], "type": "vertical", "direction": "up", "wheel_times": 3, "desktop": mock_desktop})
+        mock_desktop.scroll.assert_called_once_with([10, 20], "vertical", "up", 3)
 
     def test_move_tool_drag(self, mock_desktop):
         """Test move_tool delegation (drag)."""
@@ -135,25 +140,15 @@ class TestAgentToolsService:
 
     def test_memory_tool_write(self):
         """Test memory_tool write mode."""
-        # memory_tool uses Path.cwd() / '.memories'
-        # We should patch Path to avoid real file I/O
-        with patch("pathlib.Path.mkdir"), \
-             patch("pathlib.Path.write_text") as mock_write:
-             
-            # We need to mock Path objects returned by / operator
-            # This is tricky with simple mocks.
-            # Alternatively, since it writes to .memories, we can use fs mock or just verify logic if possible.
-            # Easier to check what it returns or if it errors.
+        with patch("windows_use.agent.tools.service.memory_path") as mock_mem_path:
+            mock_file = MagicMock()
+            mock_mem_path.__truediv__.return_value = mock_file
+            mock_file.name = "test.md"
+            mock_file.parent = MagicMock()
+            mock_file.exists.return_value = False
+            mock_file.parent.relative_to.return_value = Path("rel/path")
             
-            # Let's simple check if it runs without error and calls write_text on a path
-            with patch("windows_use.agent.tools.service.memory_path") as mock_mem_path:
-                mock_file = MagicMock()
-                mock_mem_path.__truediv__.return_value = mock_file
-                mock_file.name = "test.md"
-                mock_file.parent = MagicMock()
-                mock_file.parent.relative_to.return_value = Path("rel/path")
-                
-                result = memory_tool.invoke(**{"mode": "write", "path": "test.md", "content": "data"})
-                
-                mock_file.write_text.assert_called_once_with("data", encoding='utf-8')
-                assert "test.md created" in result
+            result = memory_tool.invoke(**{"mode": "write", "path": "test.md", "content": "data"})
+            
+            mock_file.write_text.assert_called_once_with("data", encoding='utf-8')
+            assert "test.md created" in result

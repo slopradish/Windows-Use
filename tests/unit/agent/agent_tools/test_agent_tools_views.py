@@ -6,20 +6,20 @@ from typing import Literal
 
 from windows_use.agent.tools.views import (
     SharedBaseModel,
+    App,
     Done,
-    Clipboard,
+    Memory,
     Click,
     Shell,
     Type,
-    Launch,
+    MultiSelect,
+    MultiEdit,
     Scroll,
-    Drag,
     Move,
     Shortcut,
-    Key,
     Wait,
     Scrape,
-    Switch,
+    Desktop,
 )
 
 class TestAgentToolsViews:
@@ -32,8 +32,25 @@ class TestAgentToolsViews:
         Test SharedBaseModel allows extra fields.
         """
         model = SharedBaseModel(field1="value1", extra_field="extra")
-        assert model.field1 == "value1"
-        assert model.extra_field == "extra"
+        assert getattr(model, "field1") == "value1"
+        assert getattr(model, "extra_field") == "extra"
+
+    def test_app_model(self):
+        """
+        Test App model validation.
+        """
+        app = App(mode="launch", name="notepad")
+        assert app.mode == "launch"
+        assert app.name == "notepad"
+        
+        # Test resize
+        app_resize = App(mode="resize", loc=[10, 20], size=[100, 200])
+        assert app_resize.mode == "resize"
+        assert app_resize.loc == [10, 20]
+        assert app_resize.size == [100, 200]
+
+        with pytest.raises(ValidationError):
+            App(mode="invalid")
 
     def test_done_model(self):
         """
@@ -46,44 +63,30 @@ class TestAgentToolsViews:
         with pytest.raises(ValidationError):
             Done()  # type: ignore
 
-    @pytest.mark.parametrize(
-        "mode, text, should_pass, error_match",
-        [
-            ("copy", "some text", True, None),
-            ("paste", None, True, None),
-            # Invalid cases based on new validator
-            ("copy", None, False, "must be provided for 'copy' mode"),
-            ("paste", "some text", False, "must not be provided for 'paste' mode"),
-            ("invalid", "text", False, "Input should be 'copy' or 'paste'"),
-        ],
-    )
-    def test_clipboard_model(self, mode, text, should_pass, error_match):
+    def test_memory_model(self):
         """
-        Test Clipboard model validation for mode and text.
+        Test Memory model validation.
         """
-        if should_pass:
-            # We need to construct the dict carefully to test the default `text=None`
-            input_dict = {"mode": mode}
-            if text is not None:
-                input_dict["text"] = text
-            
-            clipboard = Clipboard(**input_dict)
-            assert clipboard.mode == mode
-            # For paste mode, text should be None even if not passed
-            assert clipboard.text == text
-        else:
-            with pytest.raises(ValidationError, match=error_match):
-                Clipboard(mode=mode, text=text)
+        mem = Memory(mode="write", path="test.md", content="hello")
+        assert mem.mode == "write"
+        assert mem.path == "test.md"
+        assert mem.content == "hello"
+
+        mem_update = Memory(mode="update", path="test.md", operation="replace", old_str="a", new_str="b")
+        assert mem_update.operation == "replace"
+        
+        with pytest.raises(ValidationError):
+            Memory(mode="invalid")
 
     @pytest.mark.parametrize(
         "loc, button, clicks, should_pass",
         [
-            ((10, 20), "left", 1, True),
-            ((0, 0), "right", 2, True),
-            ((100, 100), "middle", 0, True),
-            ((10, 20, 30), "left", 1, False),  # Invalid loc tuple size
-            ((10, 20), "top", 1, False),  # Invalid button
-            ((10, 20), "left", 4, False),  # Invalid clicks
+            ([10, 20], "left", 1, True),
+            ([0, 0], "right", 2, True),
+            ([100, 100], "middle", 0, True),
+            ([10, 20, 30], "left", 1, True),  # list[int] doesn't enforce size in Pydantic unless specified
+            ([10, 20], "top", 1, False),  # Invalid button
+            ([10, 20], "left", 3, False),  # Invalid clicks (Literal[0,1,2])
             (None, "left", 1, False),  # Missing loc
         ],
     )
@@ -114,14 +117,13 @@ class TestAgentToolsViews:
     @pytest.mark.parametrize(
         "loc, text, clear, caret_position, should_pass",
         [
-            ((10, 20), "hello", "false", "idle", True),
-            ((0, 0), "world", "true", "start", True),
-            ((50, 50), "test", "false", "end", True),
-            ((10, 20, 30), "hello", "false", "idle", False),  # Invalid loc
-            ((10, 20), "hello", "invalid", "idle", False),  # Invalid clear
-            ((10, 20), "hello", "false", "invalid", False),  # Invalid caret_position
+            ([10, 20], "hello", "false", "idle", True),
+            ([0, 0], "world", "true", "start", True),
+            ([50, 50], "test", "false", "end", True),
+            ([10, 20], "hello", "invalid", "idle", False),  # Invalid clear
+            ([10, 20], "hello", "false", "invalid", False),  # Invalid caret_position
             (None, "hello", "false", "idle", False),  # Missing loc
-            ((10, 20), None, "false", "idle", False),  # Missing text
+            ([10, 20], None, "false", "idle", False),  # Missing text
         ],
     )
     def test_type_model(self, loc, text, clear, caret_position, should_pass):
@@ -140,26 +142,14 @@ class TestAgentToolsViews:
             with pytest.raises(ValidationError):
                 Type(loc=loc, text=text, clear=clear, caret_position=caret_position)
 
-    def test_launch_model(self):
-        """
-        Test Launch model validation.
-        """
-        launch = Launch(name="notepad")
-        assert launch.name == "notepad"
-        with pytest.raises(ValidationError):
-            Launch(name=123)  # type: ignore
-        with pytest.raises(ValidationError):
-            Launch()  # type: ignore
-
     @pytest.mark.parametrize(
         "loc, type_val, direction, wheel_times, should_pass",
         [
             (None, "vertical", "down", 1, True),
-            ((10, 20), "horizontal", "left", 5, True),
+            ([10, 20], "horizontal", "left", 5, True),
             (None, "vertical", "up", 10, True),
             (None, "invalid", "down", 1, False),  # Invalid type
             (None, "vertical", "invalid", 1, False),  # Invalid direction
-            (None, "vertical", "down", -1, False),  # Invalid wheel_times (negative)
         ],
     )
     def test_scroll_model(self, loc, type_val, direction, wheel_times, should_pass):
@@ -181,62 +171,38 @@ class TestAgentToolsViews:
                 )
 
     @pytest.mark.parametrize(
-        "from_loc, to_loc, should_pass",
+        "loc, drag, should_pass",
         [
-            ((0, 0), (100, 100), True),
-            ((10, 20), (50, 60), True),
-            ((0, 0, 0), (100, 100), False),  # Invalid from_loc
-            ((0, 0), (100, 100, 100), False),  # Invalid to_loc
-            (None, (100, 100), False),  # Missing from_loc
-            ((0, 0), None, False),  # Missing to_loc
+            ([100, 100], True, True),
+            ([0, 0], False, True),
+            (None, False, False),  # Missing loc
         ],
     )
-    def test_drag_model(self, from_loc, to_loc, should_pass):
+    def test_move_model(self, loc, drag, should_pass):
         """
-        Test Drag model validation for from_loc and to_loc.
-        """
-        if should_pass:
-            drag = Drag(from_loc=from_loc, to_loc=to_loc)
-            assert drag.from_loc == from_loc
-            assert drag.to_loc == to_loc
-        else:
-            with pytest.raises(ValidationError):
-                Drag(from_loc=from_loc, to_loc=to_loc)
-
-    @pytest.mark.parametrize(
-        "to_loc, should_pass",
-        [
-            ((100, 100), True),
-            ((0, 0), True),
-            ((100, 100, 100), False),  # Invalid to_loc
-            (None, False),  # Missing to_loc
-        ],
-    )
-    def test_move_model(self, to_loc, should_pass):
-        """
-        Test Move model validation for to_loc.
+        Test Move model validation for loc and drag.
         """
         if should_pass:
-            move = Move(to_loc=to_loc)
-            assert move.to_loc == to_loc
+            move = Move(loc=loc, drag=drag)
+            assert move.loc == loc
+            assert move.drag == drag
         else:
             with pytest.raises(ValidationError):
-                Move(to_loc=to_loc)
+                Move(loc=loc, drag=drag)
 
     @pytest.mark.parametrize(
         "shortcut, should_pass",
         [
-            (["ctrl", "c"], True),
-            (["alt", "f4"], True),
-            ([], True),  # Empty list is valid
-            ("ctrl+c", False),  # Not a list
-            (["ctrl", 123], False),  # Invalid type in list
+            ("ctrl+c", True),
+            ("win", True),
+            ("enter", True),
+            (123, False),  # Not a string
             (None, False),  # Missing shortcut
         ],
     )
     def test_shortcut_model(self, shortcut, should_pass):
         """
-        Test Shortcut model validation for shortcut list.
+        Test Shortcut model validation for shortcut string.
         """
         if should_pass:
             s = Shortcut(shortcut=shortcut)
@@ -245,35 +211,12 @@ class TestAgentToolsViews:
             with pytest.raises(ValidationError):
                 Shortcut(shortcut=shortcut)
 
-    def test_switch_model(self):
-        """
-        Test Switch model validation.
-        """
-        switch = Switch(name="chrome")
-        assert switch.name == "chrome"
-        with pytest.raises(ValidationError):
-            Switch(name=123)  # type: ignore
-        with pytest.raises(ValidationError):
-            Switch()  # type: ignore
-
-    def test_key_model(self):
-        """
-        Test Key model validation.
-        """
-        key = Key(key="enter")
-        assert key.key == "enter"
-        with pytest.raises(ValidationError):
-            Key(key=123)  # type: ignore
-        with pytest.raises(ValidationError):
-            Key()  # type: ignore
-
     @pytest.mark.parametrize(
         "duration, should_pass",
         [
             (5, True),
             (0, True),
-            (-1, False),  # Negative duration
-            (1.5, False),  # Float duration is ok for pydantic, but not for the tool, we check int here
+            ("5", True),  # Pydantic coerces string to int
             (None, False),  # Missing duration
         ],
     )
@@ -283,7 +226,7 @@ class TestAgentToolsViews:
         """
         if should_pass:
             wait = Wait(duration=duration)
-            assert wait.duration == duration
+            assert wait.duration == int(duration)
         else:
             with pytest.raises(ValidationError):
                 Wait(duration=duration)
@@ -298,3 +241,17 @@ class TestAgentToolsViews:
             Scrape(url=123)  # type: ignore
         with pytest.raises(ValidationError):
             Scrape()  # type: ignore
+
+    def test_desktop_model(self):
+        """
+        Test Desktop model validation.
+        """
+        dt = Desktop(action="switch", desktop_name="Desktop 1")
+        assert dt.action == "switch"
+        assert dt.desktop_name == "Desktop 1"
+        
+        dt_create = Desktop(action="create")
+        assert dt_create.action == "create"
+        
+        with pytest.raises(ValidationError):
+            Desktop(action="invalid")

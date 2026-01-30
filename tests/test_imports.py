@@ -1,7 +1,8 @@
 import sys
 import time
+import pytest
 
-def test_import(module_name, from_list=None):
+def check_import(module_name, from_list=None):
     print(f"Importing {module_name}...", end=" ", flush=True)
     start = time.time()
     try:
@@ -10,17 +11,21 @@ def test_import(module_name, from_list=None):
         else:
             __import__(module_name)
         print(f"Success in {time.time() - start:.2f}s")
+        return True
     except Exception as e:
         print(f"Failed: {e}")
+        return False
 
-test_import("dotenv")
-test_import("windows_use.llms.google", ["ChatGoogle"])
-test_import("windows_use.llms.anthropic", ["ChatAnthropic"])
-test_import("windows_use.llms.ollama", ["ChatOllama"])
-test_import("windows_use.llms.mistral", ["ChatMistral"])
-test_import("windows_use.llms.azure_openai", ["ChatAzureOpenAI"])
-test_import("windows_use.llms.open_router", ["ChatOpenRouter"])
-test_import("windows_use.llms.groq", ["ChatGroq"])
-test_import("windows_use.agent", ["Agent", "Browser"])
-
-print("All imports tested.")
+@pytest.mark.parametrize("module, from_list", [
+    ("dotenv", None),
+    ("windows_use.llms.google", ["ChatGoogle"]),
+    ("windows_use.llms.anthropic", ["ChatAnthropic"]),
+    ("windows_use.llms.ollama", ["ChatOllama"]),
+    ("windows_use.llms.mistral", ["ChatMistral"]),
+    ("windows_use.llms.azure_openai", ["ChatAzureOpenAI"]),
+    ("windows_use.llms.open_router", ["ChatOpenRouter"]),
+    ("windows_use.llms.groq", ["ChatGroq"]),
+    ("windows_use.agent", ["Agent", "Browser"]),
+])
+def test_all_imports(module, from_list):
+    assert check_import(module, from_list)
