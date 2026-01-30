@@ -11,7 +11,7 @@ import pyautogui as pg
 
 class Prompt:
     @staticmethod
-    def system_prompt(mode:Literal["flash","full"],desktop:Desktop,browser: Browser,language: str,max_steps:int,instructions: list[str]=[]) -> str:
+    def system_prompt(mode:Literal["flash","normal"],desktop:Desktop,browser: Browser,language: str,max_steps:int,instructions: list[str]=[]) -> str:
         width, height = pg.size()
         match mode:
             case "flash":
@@ -21,7 +21,7 @@ class Prompt:
                     'os':desktop.get_windows_version(),
                     'browser':browser.value,
                 })
-            case _:
+            case "normal":
                 template =Path(files('windows_use.agent.prompt').joinpath('system.md')).read_text(encoding='utf-8')
                 return template.format(**{
                     'datetime': datetime.now().strftime('%A, %B %d, %Y'),
@@ -35,6 +35,8 @@ class Prompt:
                     'resolution':f'Primary Monitor ({width}x{height}) with DPI Scale: {desktop.get_dpi_scaling()}',
                     'max_steps': max_steps
                 })
+            case _:
+                raise ValueError(f"Invalid mode: {mode} (must be 'flash' or 'normal')")
     
     @staticmethod
     def action_prompt(agent_data:AgentData) -> str:

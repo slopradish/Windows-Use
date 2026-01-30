@@ -27,7 +27,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 class Agent:
-    def __init__(self,mode:Literal["flash","full"]="full",instructions:list[str]=[],browser:Browser=Browser.EDGE, use_annotation:bool=False, llm: BaseChatLLM=None,max_consecutive_failures:int=3,max_steps:int=25,use_vision:bool=False,auto_minimize:bool=False,experimental:bool=False):
+    def __init__(self,mode:Literal["flash","normal"]="normal",instructions:list[str]=[],browser:Browser=Browser.EDGE, use_annotation:bool=False, llm: BaseChatLLM=None,max_consecutive_failures:int=3,max_steps:int=25,use_vision:bool=False,auto_minimize:bool=False,experimental:bool=False):
         '''
         Initialize the Windows Use Agent.
 

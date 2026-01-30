@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.4] - 2026-01-30
+
+### Changed
+- **Performance Optimization**: 
+  - Significant improvement in **Tree Traversal speed** (0.2-0.8s).
+  - **Desktop State Capture** optimized to (0.4-1.0s).
+  - Reduced computation expense by removing reliance on the root level children.
+  - Minimized COM calls to **UIA3** using enhanced caching mechanisms.
+- **LLM Wrappers**:
+  - Updated LLM wrappers for better reliability.
+  - Implemented Minimal Schema for Ollama to reduce token usage and improve stability.
+
+### Fixed
+- **VDM**: Fixes for Virtual Desktop Manager interaction.
+
+
 ## [0.7.1] - 2026-01-27
 
 ### Added

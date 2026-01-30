@@ -28,6 +28,9 @@ Windows Use has the following tools:
 - **Wait Tool**: Pauses execution for a specified duration to allow processes or UI animations to complete.
 
 ## Agent Config:
+- `mode`: the agent has two modes, `flash` and `normal`.
+    - `flash`: The agent will use the flash prompt to generate the response. (Lightweight)
+    - `normal`: The agent will use the normal prompt to generate the response.
 - `llm`: LLM to be used by the agent.
 - `browser`: Browser to be used by the agent.
 - `use_vision`: Screenshot will be given to the LLM if true.
