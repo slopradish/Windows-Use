@@ -12,9 +12,20 @@ import os
 
 load_dotenv()
 
+def _env_true(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
 def build_llm():
-    provider = os.getenv("LLM_PROVIDER", "anthropic").strip().lower()
+    provider = os.getenv("LLM_PROVIDER", "ollama").strip().lower()
     temperature = float(os.getenv("LLM_TEMPERATURE", "0.2"))
+    allow_remote = _env_true("ALLOW_REMOTE_LLM", "false")
+    remote_providers = {"google", "openrouter", "groq", "mistral", "azure", "anthropic"}
+
+    if provider in remote_providers and not allow_remote:
+        raise ValueError(
+            f"Remote provider '{provider}' is blocked by default for privacy. "
+            "Set ALLOW_REMOTE_LLM=true to enable remote LLM traffic."
+        )
 
     if provider == "lmstudio":
         return ChatOpenAI(
@@ -53,14 +64,24 @@ def build_llm():
             deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
             temperature=temperature,
         )
-    return ChatAnthropic(
-        model=os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5"),
-        temperature=temperature,
+    if provider == "anthropic":
+        return ChatAnthropic(
+            model=os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5"),
+            temperature=temperature,
+        )
+    raise ValueError(
+        f"Unknown LLM_PROVIDER='{provider}'. "
+        "Use one of: lmstudio, ollama, google, openrouter, groq, mistral, azure, anthropic."
     )
 
 def main():
     llm = build_llm()
-    agent = Agent(llm=llm, browser=Browser.EDGE,auto_minimize=True,log_to_file=True)
+    agent = Agent(
+        llm=llm,
+        browser=Browser.EDGE,
+        auto_minimize=_env_true("AUTO_MINIMIZE", "true"),
+        log_to_file=_env_true("LOG_TO_FILE", "false"),
+    )
     agent.invoke(query=input("Enter a query: "))
 
 if __name__ == "__main__":

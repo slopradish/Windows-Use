@@ -2332,7 +2332,6 @@ dependencies = [
     { name = "fuzzywuzzy" },
     { name = "google-genai" },
     { name = "groq" },
-    { name = "ipykernel" },
     { name = "mistralai" },
     { name = "ollama" },
     { name = "openai" },
@@ -2343,17 +2342,17 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "python-levenshtein" },
     { name = "pywin32" },
-    { name = "qrcode" },
     { name = "rich" },
     { name = "tabulate" },
     { name = "termcolor" },
-    { name = "twine" },
 ]
 
 [package.optional-dependencies]
 dev = [
+    { name = "ipykernel" },
     { name = "pytest" },
     { name = "ruff" },
+    { name = "twine" },
 ]
 
 [package.metadata]
@@ -2364,7 +2363,6 @@ requires-dist = [
     { name = "fuzzywuzzy", specifier = ">=0.18.0" },
     { name = "google-genai", specifier = ">=1.45.0" },
     { name = "groq", specifier = ">=0.29.0" },
-    { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "mistralai", specifier = ">=1.9.11" },
     { name = "ollama", specifier = ">=0.5.1" },
     { name = "openai", specifier = ">=1.93.0" },
@@ -2372,16 +2370,16 @@ requires-dist = [
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pyautogui", specifier = ">=0.9.54" },
     { name = "pydantic", specifier = ">=2.11.7" },
+    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.1" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-levenshtein", specifier = ">=0.27.1" },
     { name = "pywin32", specifier = ">=311" },
-    { name = "qrcode", specifier = ">=8.2" },
     { name = "rich", specifier = ">=14.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.1" },
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "termcolor", specifier = ">=3.1.0" },
-    { name = "twine", specifier = ">=6.1.0" },
+    { name = "twine", marker = "extra == 'dev'", specifier = ">=6.1.0" },
 ]
 provides-extras = ["dev"]
 
