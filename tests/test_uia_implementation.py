@@ -5,6 +5,7 @@ This is a simple smoke test to ensure the methods are callable and don't crash.
 
 import sys
 import os
+import pytest
 
 # Add the parent directory to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -41,10 +42,8 @@ def test_condition_creation():
         assert not_cond is not None, "CreateNotCondition failed"
         
         print("  ✓ All condition creation functions work")
-        return True
     except Exception as e:
-        print(f"  ✗ Condition creation failed: {e}")
-        return False
+        pytest.fail(f"Condition creation failed: {e}")
 
 
 def test_find_methods():
@@ -69,13 +68,9 @@ def test_find_methods():
             print(f"  ✓ FindFirst works - found window: {first_window.Name}")
         else:
             print("  ✓ FindFirst works - no window found (this is ok)")
-        
-        return True
     except Exception as e:
         print(f"  ✗ Find methods failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+        raise
 
 
 def test_cache_methods():
@@ -121,13 +116,9 @@ def test_cache_methods():
             print(f"  ✓ GetCachedParent works - found parent")
         else:
             print("  ✓ GetCachedParent works (no cached parent, as expected)")
-        
-        return True
     except Exception as e:
         print(f"  ✗ Cache methods failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+        raise
 
 
 def main():
@@ -138,14 +129,21 @@ def main():
     
     results = []
     
+    def run_test(name, fn):
+        try:
+            fn()
+            results.append((name, True))
+        except Exception:
+            results.append((name, False))
+    
     # Run tests
-    results.append(("Condition Creation", test_condition_creation()))
+    run_test("Condition Creation", test_condition_creation)
     print()
     
-    results.append(("Find Methods", test_find_methods()))
+    run_test("Find Methods", test_find_methods)
     print()
     
-    results.append(("Cache Methods", test_cache_methods()))
+    run_test("Cache Methods", test_cache_methods)
     print()
     
     # Summary

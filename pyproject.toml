@@ -57,3 +57,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 packages = ["windows_use"]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::pydantic.PydanticDeprecatedSince212",
+]
