@@ -103,9 +103,6 @@
 │   │   └── service.py              # Tool class decorator
 │   ├── vdm/                        # Virtual Desktop Manager
 │   │   └── core.py                 # Windows 10/11 VDM API wrapper
-│   └── telemetry/                  # Analytics & telemetry (PostHog)
-│       ├── service.py              # ProductTelemetry
-│       └── views.py                # Telemetry event models
 ├── tests/                          # Test suite (pytest)
 │   ├── unit/                       # Unit tests
 │   │   ├── agent/                  # Agent tests
@@ -516,7 +513,6 @@ class Agent:
         self.registry = Registry([...])  # 14 tools
         self.desktop = Desktop()
         self.watchdog = WatchDog()
-        self.telemetry = ProductTelemetry()
         # ...
 ```
 

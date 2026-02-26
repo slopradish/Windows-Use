@@ -62,7 +62,6 @@ The project uses `uv` as the package manager.
 - `windows_use/vdm` - VDM (Virtual Desktop Manager) Module the way to access the Windows VDM API
 - `windows_use/tool` - The Tool Module used to implement the tools for the agent.
 - `windows_use/messages` - Messages Module used to implement varrious kinds of message formats for the LLM (includes SystemMessage,HumanMessage,AIMessage,..etc)
-- `windows_use/telemetry` - Telemetry Module used to track the usage of the agent.
 
 ## License
 

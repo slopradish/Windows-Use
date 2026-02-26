@@ -1,7 +1,6 @@
 from windows_use.messages import SystemMessage, HumanMessage, AIMessage, ImageMessage, ToolMessage
 from windows_use.agent.tools import BUILTIN_TOOLS, EXPERIMENTAL_TOOLS
 from windows_use.agent.views import AgentResult, AgentState
-from windows_use.telemetry.service import ProductTelemetry
 from windows_use.agent.registry.service import Registry
 from windows_use.agent.watchdog.service import WatchDog
 from windows_use.agent.registry.views import ToolResult
@@ -97,7 +96,6 @@ class Agent(BaseAgent):
             max_consecutive_failures=max_consecutive_failures,
             max_steps=max_steps,
         )
-        self.telemetry = ProductTelemetry()
         self.watchdog = WatchDog()
         self.console = Console()
         self.prompt = Prompt()

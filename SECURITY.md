@@ -93,7 +93,7 @@ This project is designed to:
 - [ ] Review what changes were made
 - [ ] Check for unexpected file modifications
 - [ ] Verify system settings remain as expected
-- [ ] Review any logs or telemetry data
+- [ ] Review any logs or diagnostic data
 
 ## 🚨 Known Security Limitations
 
