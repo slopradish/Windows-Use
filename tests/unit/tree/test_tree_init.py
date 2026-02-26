@@ -17,8 +17,7 @@ class TestTreeService:
     def tree(self, mock_desktop):
         return Tree(desktop=mock_desktop)
 
-    @patch("windows_use.agent.tree.service.GetRootControl")
-    def test_init(self, mock_get_root, mock_desktop):
+    def test_init(self, mock_desktop):
         tree = Tree(desktop=mock_desktop)
         assert tree.desktop == mock_desktop
         assert tree.screen_size.width == 1920
@@ -37,9 +36,9 @@ class TestTreeService:
 
     @patch("windows_use.agent.tree.service.sleep")
     def test_get_state(self, mock_sleep, tree):
-        # Mock get_window_wise_nodes returning 3 lists
+        # Mock get_window_wise_nodes returning 4 lists
         with patch.object(tree, 'get_window_wise_nodes') as mock_window_wise:
-            mock_window_wise.return_value = ([], [], [])
+            mock_window_wise.return_value = ([], [], [], [])
             state = tree.get_state(active_window_handle=1, other_windows_handles=[2])
             
             assert isinstance(state, TreeState)

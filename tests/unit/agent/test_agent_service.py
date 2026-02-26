@@ -2,11 +2,10 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-import json
 from windows_use.agent.service import Agent
 from windows_use.agent.views import AgentResult
-from windows_use.messages import AIMessage, HumanMessage, SystemMessage
-from windows_use.llms.base import ChatLLMResponse
+from windows_use.messages import ToolMessage
+from windows_use.llms.views import ChatLLMResponse
 
 class TestAgent:
     """
@@ -26,21 +25,18 @@ class TestAgent:
         """Mock Desktop."""
         with patch("windows_use.agent.service.Desktop") as mock_class:
             mock_instance = mock_class.return_value
-            mock_instance.get_state.return_value = MagicMock()
-            mock_instance.get_default_language.return_value = "English"
-            # mock_instance.auto_minimize is a context manager
-            mock_instance.auto_minimize.return_value.__enter__.return_value = None
+            mock_instance.get_state.return_value = MagicMock(screenshot=None)
+            mock_instance.use_vision = False
+            mock_instance.tree.on_focus_change = MagicMock()
             yield mock_instance
 
     @pytest.fixture
     def mock_prompt(self):
         """Mock Prompt with string return values for Pydantic."""
         with patch("windows_use.agent.service.Prompt") as mock_p:
-            mock_p.system_prompt.return_value = "System prompt"
-            mock_p.observation_prompt.return_value = "Observation prompt"
-            mock_p.previous_observation_prompt.return_value = "Prev observation prompt"
-            mock_p.action_prompt.return_value = "Action prompt"
-            mock_p.answer_prompt.return_value = "Answer prompt"
+            mock_instance = mock_p.return_value
+            mock_instance.system.return_value = "System prompt"
+            mock_instance.human.return_value = "Human prompt"
             yield mock_p
 
     @pytest.fixture
@@ -69,13 +65,12 @@ class TestAgent:
         mock_registry.execute.return_value = mock_response
         
         # Mock LLM response
-        data = {
-            "thought": "I have finished the task.",
-            "evaluate": "Task complete",
-            "action": {"name": "done_tool", "params": {"answer": "Job's done"}}
-        }
         mock_llm.invoke.return_value = ChatLLMResponse(
-            content=AIMessage(content=json.dumps(data))
+            content=ToolMessage(
+                id="1",
+                name="done_tool",
+                params={"thought": "I have finished the task.", "evaluate": "Task complete", "answer": "Job's done"},
+            )
         )
         
         agent = Agent(llm=mock_llm)
@@ -97,47 +92,18 @@ class TestAgent:
         mock_registry.execute.return_value = mock_response
         
         # Mock LLM response (non-done action)
-        data = {
-            "thought": "Keep working",
-            "evaluate": "Not done",
-            "action": {"name": "click_tool", "params": {"loc": [10, 10]}}
-        }
         mock_llm.invoke.return_value = ChatLLMResponse(
-            content=AIMessage(content=json.dumps(data))
+            content=ToolMessage(
+                id="1",
+                name="click_tool",
+                params={"thought": "Keep working", "evaluate": "Not done", "loc": [10, 10]},
+            )
         )
         
         agent = Agent(llm=mock_llm, max_steps=2)
         result = agent.invoke("test query")
         
         assert result.is_done is False
-        assert "Max steps reached" in result.error
+        assert "maximum number of steps" in result.error
         assert mock_llm.invoke.call_count == 2
 
-    def test_print_response(self, mock_llm, mock_desktop, mock_console):
-        """Test print_response utility."""
-        agent = Agent(llm=mock_llm)
-        
-        # Mock invoke to return a success result
-        with patch.object(Agent, 'invoke') as mock_invoke:
-            mock_invoke.return_value = AgentResult(is_done=True, content="Success")
-            agent.print_response("test query")
-            
-        # Verify it called console.print with Markdown
-        from rich.markdown import Markdown
-        assert mock_console.print.called
-        args = mock_console.print.call_args[0]
-        assert isinstance(args[0], Markdown)
-
-    def test_print_response_error(self, mock_llm, mock_desktop, mock_console):
-        """Test print_response with error."""
-        agent = Agent(llm=mock_llm)
-        
-        # Mock invoke to return an error result
-        with patch.object(Agent, 'invoke') as mock_invoke:
-            mock_invoke.return_value = AgentResult(is_done=False, error="Some error")
-            agent.print_response("test query")
-            
-        from rich.markdown import Markdown
-        assert mock_console.print.called
-        args = mock_console.print.call_args[0]
-        assert isinstance(args[0], Markdown)

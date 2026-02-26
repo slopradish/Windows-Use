@@ -124,7 +124,7 @@ class TestAgentToolsService:
         mock_node = MagicMock()
         mock_node.text = "Visual Content"
         mock_desktop.desktop_state.tree_state.dom_informative_nodes = [mock_node]
-        mock_desktop.desktop_state.tree_state.dom_node = MagicMock(vertical_scroll_percent=0)
+        mock_desktop.desktop_state.tree_state.dom_node = MagicMock(metadata={"vertical_scroll_percent": 0})
         
         result = scrape_tool.invoke(**{"url": "http://test", "desktop": mock_desktop})
         assert "Visual Content" in result

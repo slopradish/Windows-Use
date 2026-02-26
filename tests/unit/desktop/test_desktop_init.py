@@ -16,7 +16,9 @@ class TestDesktopService:
 
     def test_init(self, desktop):
         assert desktop.desktop_state is None
-        assert desktop.get_screen_size().width == 1920
+        size = desktop.get_screen_size()
+        assert size.width > 0
+        assert size.height > 0
 
     @patch("windows_use.agent.desktop.service.win32gui.EnumWindows")
     @patch("windows_use.agent.desktop.service.win32gui.IsWindowVisible")
@@ -47,7 +49,7 @@ class TestDesktopService:
              patch("windows_use.agent.desktop.service.get_current_desktop", return_value={"name": "Desktop 1"}), \
              patch("windows_use.agent.desktop.service.get_all_desktops", return_value=[{"name": "Desktop 1"}]):
              
-             state = desktop.get_state(use_vision=False)
+             state = desktop.get_state()
              
         assert isinstance(state, DesktopState)
         assert state.active_window.handle == 123

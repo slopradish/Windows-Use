@@ -1,7 +1,8 @@
 # tests/unit/agent/test_agent_views.py
 
 import pytest
-from windows_use.agent.views import AgentResult, Action, AgentData
+from windows_use.agent.views import AgentResult, AgentState
+from windows_use.messages import AIMessage
 
 class TestAgentViews:
     """
@@ -22,33 +23,35 @@ class TestAgentViews:
         assert result_custom.content == "Success"
         assert result_custom.error == "No error"
 
-    def test_action_initialization(self):
+    def test_agent_state_defaults(self):
         """
-        Test Action initialization.
+        Test AgentState default values.
         """
-        action = Action(name="test_action", params={"key": "value"})
-        assert action.name == "test_action"
-        assert action.params == {"key": "value"}
-        
-        # Test to_dict
-        d = action.to_dict()
-        assert d == {'name': 'test_action', 'params': {'key': 'value'}}
+        state = AgentState()
+        assert state.task == ""
+        assert state.messages == []
+        assert state.error_messages == []
+        assert state.desktop is None
+        assert state.step == 0
+        assert state.max_steps == 25
+        assert state.max_consecutive_failures == 3
 
-    def test_agent_data_initialization(self):
+    def test_agent_state_custom(self):
         """
-        Test AgentData initialization.
+        Test AgentState initialization with custom values.
         """
-        agent_data = AgentData()
-        assert agent_data.evaluate is None
-        assert agent_data.thought is None
-        assert agent_data.action is None
-        assert agent_data.observation is None
-
-        mock_action = Action(name="mock_action", params={})
-        agent_data_custom = AgentData(
-            evaluate="eval", thought="thought", action=mock_action, observation="obs"
+        msg = AIMessage(content="hello")
+        state = AgentState(
+            task="test",
+            messages=[msg],
+            error_messages=[msg],
+            step=2,
+            max_steps=10,
+            max_consecutive_failures=1,
         )
-        assert agent_data_custom.evaluate == "eval"
-        assert agent_data_custom.thought == "thought"
-        assert agent_data_custom.action == mock_action
-        assert agent_data_custom.observation == "obs"
+        assert state.task == "test"
+        assert state.messages == [msg]
+        assert state.error_messages == [msg]
+        assert state.step == 2
+        assert state.max_steps == 10
+        assert state.max_consecutive_failures == 1

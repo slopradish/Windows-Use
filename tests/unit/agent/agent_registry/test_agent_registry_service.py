@@ -37,7 +37,7 @@ class TestRegistry:
         registry = Registry(tools=[mock_tool])
         mock_desktop = MagicMock()
         
-        result = registry.execute("TestTool", desktop=mock_desktop, param1="val1")
+        result = registry.execute("TestTool", {"param1": "val1"}, desktop=mock_desktop)
         
         assert result.is_success is True
         assert result.content == "Tool execution result"
@@ -48,7 +48,7 @@ class TestRegistry:
         mock_tool.validate.return_value = ["Invalid param"]
         registry = Registry(tools=[mock_tool])
         
-        result = registry.execute("TestTool", param1="val1")
+        result = registry.execute("TestTool", {"param1": "val1"})
         
         assert result.is_success is False
         assert "validation failed" in result.error
@@ -57,6 +57,6 @@ class TestRegistry:
     def test_execute_not_found(self):
         """Test execution of non-existent tool."""
         registry = Registry(tools=[])
-        result = registry.execute("NonExistent")
+        result = registry.execute("NonExistent", {})
         assert result.is_success is False
         assert "not found" in result.error

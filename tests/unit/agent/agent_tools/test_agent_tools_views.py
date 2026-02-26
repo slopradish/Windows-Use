@@ -2,7 +2,6 @@
 
 import pytest
 from pydantic import ValidationError
-from typing import Literal
 
 from windows_use.agent.tools.views import (
     SharedBaseModel,
@@ -31,7 +30,7 @@ class TestAgentToolsViews:
         """
         Test SharedBaseModel allows extra fields.
         """
-        model = SharedBaseModel(field1="value1", extra_field="extra")
+        model = SharedBaseModel(thought="test", field1="value1", extra_field="extra")
         assert getattr(model, "field1") == "value1"
         assert getattr(model, "extra_field") == "extra"
 
@@ -39,44 +38,51 @@ class TestAgentToolsViews:
         """
         Test App model validation.
         """
-        app = App(mode="launch", name="notepad")
+        app = App(thought="test", mode="launch", name="notepad")
         assert app.mode == "launch"
         assert app.name == "notepad"
         
         # Test resize
-        app_resize = App(mode="resize", loc=[10, 20], size=[100, 200])
+        app_resize = App(thought="test", mode="resize", loc=[10, 20], size=[100, 200])
         assert app_resize.mode == "resize"
         assert app_resize.loc == [10, 20]
         assert app_resize.size == [100, 200]
 
         with pytest.raises(ValidationError):
-            App(mode="invalid")
+            App(thought="test", mode="invalid")
 
     def test_done_model(self):
         """
         Test Done model validation.
         """
-        done = Done(answer="Task completed.")
+        done = Done(thought="test", answer="Task completed.")
         assert done.answer == "Task completed."
         with pytest.raises(ValidationError):
-            Done(answer=123)  # type: ignore
+            Done(thought="test", answer=123)  # type: ignore
         with pytest.raises(ValidationError):
-            Done()  # type: ignore
+            Done(thought="test")  # type: ignore
 
     def test_memory_model(self):
         """
         Test Memory model validation.
         """
-        mem = Memory(mode="write", path="test.md", content="hello")
+        mem = Memory(thought="test", mode="write", path="test.md", content="hello")
         assert mem.mode == "write"
         assert mem.path == "test.md"
         assert mem.content == "hello"
 
-        mem_update = Memory(mode="update", path="test.md", operation="replace", old_str="a", new_str="b")
+        mem_update = Memory(
+            thought="test",
+            mode="update",
+            path="test.md",
+            operation="replace",
+            old_str="a",
+            new_str="b",
+        )
         assert mem_update.operation == "replace"
         
         with pytest.raises(ValidationError):
-            Memory(mode="invalid")
+            Memory(thought="test", mode="invalid")
 
     @pytest.mark.parametrize(
         "loc, button, clicks, should_pass",
@@ -95,35 +101,35 @@ class TestAgentToolsViews:
         Test Click model validation for loc, button, and clicks.
         """
         if should_pass:
-            click = Click(loc=loc, button=button, clicks=clicks)
+            click = Click(thought="test", loc=loc, button=button, clicks=clicks)
             assert click.loc == loc
             assert click.button == button
             assert click.clicks == clicks
         else:
             with pytest.raises(ValidationError):
-                Click(loc=loc, button=button, clicks=clicks)
+                Click(thought="test", loc=loc, button=button, clicks=clicks)
 
     def test_shell_model(self):
         """
         Test Shell model validation.
         """
-        shell = Shell(command="Get-Process")
+        shell = Shell(thought="test", command="Get-Process")
         assert shell.command == "Get-Process"
         with pytest.raises(ValidationError):
-            Shell(command=123)  # type: ignore
+            Shell(thought="test", command=123)  # type: ignore
         with pytest.raises(ValidationError):
-            Shell()  # type: ignore
+            Shell(thought="test")  # type: ignore
 
     @pytest.mark.parametrize(
         "loc, text, clear, caret_position, should_pass",
         [
-            ([10, 20], "hello", "false", "idle", True),
-            ([0, 0], "world", "true", "start", True),
-            ([50, 50], "test", "false", "end", True),
-            ([10, 20], "hello", "invalid", "idle", False),  # Invalid clear
-            ([10, 20], "hello", "false", "invalid", False),  # Invalid caret_position
-            (None, "hello", "false", "idle", False),  # Missing loc
-            ([10, 20], None, "false", "idle", False),  # Missing text
+            ([10, 20], "hello", False, "idle", True),
+            ([0, 0], "world", True, "start", True),
+            ([50, 50], "test", False, "end", True),
+            ([10, 20], "hello", "notabool", "idle", False),  # Invalid clear
+            ([10, 20], "hello", False, "invalid", False),  # Invalid caret_position
+            (None, "hello", False, "idle", False),  # Missing loc
+            ([10, 20], None, False, "idle", False),  # Missing text
         ],
     )
     def test_type_model(self, loc, text, clear, caret_position, should_pass):
@@ -132,7 +138,7 @@ class TestAgentToolsViews:
         """
         if should_pass:
             type_obj = Type(
-                loc=loc, text=text, clear=clear, caret_position=caret_position
+                thought="test", loc=loc, text=text, clear=clear, caret_position=caret_position
             )
             assert type_obj.loc == loc
             assert type_obj.text == text
@@ -140,7 +146,7 @@ class TestAgentToolsViews:
             assert type_obj.caret_position == caret_position
         else:
             with pytest.raises(ValidationError):
-                Type(loc=loc, text=text, clear=clear, caret_position=caret_position)
+                Type(thought="test", loc=loc, text=text, clear=clear, caret_position=caret_position)
 
     @pytest.mark.parametrize(
         "loc, type_val, direction, wheel_times, should_pass",
@@ -158,7 +164,7 @@ class TestAgentToolsViews:
         """
         if should_pass:
             scroll = Scroll(
-                loc=loc, type=type_val, direction=direction, wheel_times=wheel_times
+                thought="test", loc=loc, type=type_val, direction=direction, wheel_times=wheel_times
             )
             assert scroll.loc == loc
             assert scroll.type == type_val
@@ -167,7 +173,7 @@ class TestAgentToolsViews:
         else:
             with pytest.raises(ValidationError):
                 Scroll(
-                    loc=loc, type=type_val, direction=direction, wheel_times=wheel_times
+                    thought="test", loc=loc, type=type_val, direction=direction, wheel_times=wheel_times
                 )
 
     @pytest.mark.parametrize(
@@ -183,12 +189,12 @@ class TestAgentToolsViews:
         Test Move model validation for loc and drag.
         """
         if should_pass:
-            move = Move(loc=loc, drag=drag)
+            move = Move(thought="test", loc=loc, drag=drag)
             assert move.loc == loc
             assert move.drag == drag
         else:
             with pytest.raises(ValidationError):
-                Move(loc=loc, drag=drag)
+                Move(thought="test", loc=loc, drag=drag)
 
     @pytest.mark.parametrize(
         "shortcut, should_pass",
@@ -205,11 +211,11 @@ class TestAgentToolsViews:
         Test Shortcut model validation for shortcut string.
         """
         if should_pass:
-            s = Shortcut(shortcut=shortcut)
+            s = Shortcut(thought="test", shortcut=shortcut)
             assert s.shortcut == shortcut
         else:
             with pytest.raises(ValidationError):
-                Shortcut(shortcut=shortcut)
+                Shortcut(thought="test", shortcut=shortcut)
 
     @pytest.mark.parametrize(
         "duration, should_pass",
@@ -225,33 +231,33 @@ class TestAgentToolsViews:
         Test Wait model validation for duration.
         """
         if should_pass:
-            wait = Wait(duration=duration)
+            wait = Wait(thought="test", duration=duration)
             assert wait.duration == int(duration)
         else:
             with pytest.raises(ValidationError):
-                Wait(duration=duration)
+                Wait(thought="test", duration=duration)
 
     def test_scrape_model(self):
         """
         Test Scrape model validation.
         """
-        scrape = Scrape(url="https://example.com")
+        scrape = Scrape(thought="test", url="https://example.com")
         assert scrape.url == "https://example.com"
         with pytest.raises(ValidationError):
-            Scrape(url=123)  # type: ignore
+            Scrape(thought="test", url=123)  # type: ignore
         with pytest.raises(ValidationError):
-            Scrape()  # type: ignore
+            Scrape(thought="test")  # type: ignore
 
     def test_desktop_model(self):
         """
         Test Desktop model validation.
         """
-        dt = Desktop(action="switch", desktop_name="Desktop 1")
+        dt = Desktop(thought="test", action="switch", desktop_name="Desktop 1")
         assert dt.action == "switch"
         assert dt.desktop_name == "Desktop 1"
         
-        dt_create = Desktop(action="create")
+        dt_create = Desktop(thought="test", action="create")
         assert dt_create.action == "create"
         
         with pytest.raises(ValidationError):
-            Desktop(action="invalid")
+            Desktop(thought="test", action="invalid")
