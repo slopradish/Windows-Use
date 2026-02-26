@@ -267,7 +267,7 @@ def scrape_tool(url:str,**kwargs)->str:
     tree_state=desktop_state.tree_state
     if not tree_state.dom_node:
         content=desktop.scrape(url)
-        return f'URL:{url}\nContent:\n{content}'
+        return f'URL:{url}\nContent unavailable:\n{content}'
     dom_node=tree_state.dom_node
     vertical_scroll_percent=dom_node.metadata.get('vertical_scroll_percent',0)
     content='\n'.join([node.text for node in tree_state.dom_informative_nodes])

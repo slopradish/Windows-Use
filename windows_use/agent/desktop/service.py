@@ -9,14 +9,12 @@ from locale import getpreferredencoding
 from contextlib import contextmanager
 from typing import Optional,Literal
 from time import sleep,perf_counter
-from markdownify import markdownify
 from fuzzywuzzy import process
 from psutil import Process
 import win32process
 import subprocess
 import win32gui
 import win32con
-import requests
 import logging
 import base64
 import random
@@ -425,10 +423,11 @@ class Desktop:
             self.type((x,y),text=text,clear='true')
     
     def scrape(self,url:str)->str:
-        response=requests.get(url,timeout=10)
-        html=response.text
-        content=markdownify(html=html)
-        return content
+        # Privacy-first: do not issue direct HTTP requests from the agent runtime.
+        return (
+            "Direct URL fetching is disabled for privacy. "
+            "Open the page in a browser and retry scraping from the rendered accessibility tree."
+        )
     
     def is_window_visible(self,window:uia.Control)->bool:
         is_minimized=self.get_window_status(window)!=Status.MINIMIZED
